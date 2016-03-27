@@ -5,11 +5,7 @@
 * File Name:   allocator.c
 *
 * Summary:
-*  This file is the library that is used to shim malloc() and free() so that the memory leaks can be traced.
-*     A linked list is also created to keep track of all the memory allocated with malloc() and then freed with 
-*     free(). The calls to the normal malloc() and free() are used within the new calls to perform the functions;
-*     the new calls are just for keeping track of the memory. At termination, the library will print out the
-*     number of leaks and how much memory was leaked.
+*  Type here
 *
 ****************************************************************************************************************/
 #define _GNU_SOURCE
