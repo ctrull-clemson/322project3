@@ -23,15 +23,19 @@
 void __attribute__ ((constructor)) init_methods(void);
 void __attribute__ ((destructor)) cleanup(void);
 
-int fd;
-void *head, *tail;
-
 typedef struct pageheader{
     int psize;
-    void *prev;
-    void *next;
-    void *data;
+    struct pageheader *prev;
+    struct pageheader *next;
 } pageheader;
+
+typedef struct queueheader{
+    pageheader *head;
+    pageheader *tail;
+} queueheader;
+
+int fd;
+queueheader *queue;
 
 // Shimmed malloc. Uses mmap to get pages which are used similar to how malloc normally works.
 void *malloc (size_t size)
@@ -41,28 +45,35 @@ void *malloc (size_t size)
    {
       return NULL;
    }
+   
    size += sizeof(pageheader);
    int pageCount = 1;
    
-   if((size) > PAGESIZE)
+   if(size > PAGESIZE)
    {
       pageCount = ceil(size/PAGESIZE);
    }
    
    void *page = mmap(NULL, (pageCount * PAGESIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
    pageheader *header = page;
-   header->psize = size;
-   header->prev = tail;
+   header->psize = (pageCount * PAGESIZE);
+   header->prev = queue->tail;
    header->next = NULL;
+   queue->tail = header;
    
-   return &(header->data);
+   return (page + sizeof(pageheader));
 }
 
 // 
 void free (void *ptr)
 {
-   ptr -= sizeof(ptr);
-   munmap(ptr, (int)ptr);
+   // Remove page from queue
+   pageheader *page = ptr - sizeof(pageheader);
+   page->prev->next = page->next;
+   page->next->prev = page->prev;
+   
+   // Unmap the page that was used
+   munmap(page, page->psize);
 }
 
 // 
@@ -86,10 +97,14 @@ void init_methods()
 {
    fd = open("/dev/zero", O_RDWR);
    
+   // Create header page   
+   queue = mmap(NULL, (sizeof(queueheader)), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+   queue->head = NULL;
+   queue->tail = NULL;
 }
 
 // Called when the library is unloaded and prints out the number of leaks, size of the leaks, and the totals for both.
 void cleanup(void)
 {
-   
+   // Iterate through remaining pages, free them one at a time
 }
