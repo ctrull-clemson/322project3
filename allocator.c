@@ -22,6 +22,8 @@
 void __attribute__ ((constructor)) init_methods(void);
 void __attribute__ ((destructor)) cleanup(void);
 
+int fd;
+
 // Shimmed malloc. Uses mmap to get pages which are used similar to how malloc normally works.
 void *malloc (size_t size)
 {
@@ -51,19 +53,23 @@ void free (void *ptr)
 // 
 void *calloc(size_t nmemb, size_t size)
 {  
-
+   
+   
+   return NULL;
 }
 
 // 
 void *realloc(void *ptr, size_t size)
 {
    
+   
+   return NULL;   
 }
 
 // Initializes original functions for use in the rest of the library
 void init_methods()
 {
-   
+   fd = open("/dev/zero", O_RDWR);
 }
 
 // Called when the library is unloaded and prints out the number of leaks, size of the leaks, and the totals for both.
