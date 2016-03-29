@@ -133,8 +133,7 @@ void cleanup(void)
       current = previous;
    }
    
-   free(queue->head);
-   munmap(queue, sizeof(queueheader));
+   
 }
 
 
