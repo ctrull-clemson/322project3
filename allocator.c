@@ -50,12 +50,12 @@ void takeFromQueue(struct pageheader *page)
       page->next->prev = page->prev;   
 }
 
-void addToQueue(struct pageheader *header)
+void addToQueue(struct pageheader *addingPage)
 {
-   queue->tail = header;
-   queue->tail->next = header;
-   header->prev = queue->tail;
-   header->next = NULL;
+   queue->tail->next = addingPage;
+   addingPage->prev = queue->tail;
+   queue->tail = addingPage;
+   addingPage->next = NULL;
 }
 
 // Shimmed malloc. Uses mmap to get pages which are used similar to how malloc normally works.
@@ -101,17 +101,55 @@ void free (void *ptr)
 // 
 void *calloc(size_t nmemb, size_t size)
 {  
+   // No reason to get memory if none was requested
+   if((nmemb * size) <= 0)
+   {
+      return NULL;
+   }
    
+   size = (nmemb * size);
+   size += sizeof(struct pageheader);
+   int pageCount = 1;
    
-   return NULL;
+   if(size > PAGESIZE)
+   {
+      pageCount = ceil(size/PAGESIZE);
+   }
+   
+   void *page = mmap(NULL, (pageCount * PAGESIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+   struct pageheader *header = page;
+   header->psize = (pageCount * PAGESIZE);
+   addToQueue(header);
+   
+   return (page + sizeof(struct pageheader));
 }
 
 // 
 void *realloc(void *ptr, size_t size)
 {
-   
-   
-   return NULL;   
+   struct pageheader *info = ptr - sizeof(struct pageheader);
+   if(info->psize >= (size + sizeof(struct pageheader)))
+   {
+      return ptr;
+   }
+   else
+   {  
+      // Create new page
+      int pageCount = ceil((size + sizeof(struct pageheader))/PAGESIZE);      
+      void *page = mmap(NULL, (pageCount * PAGESIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+      struct pageheader *header = page;
+      header->psize = (pageCount * PAGESIZE);
+      addToQueue(header);
+      void *dataSection = page + sizeof(struct pageheader);
+      
+      // Copy over data from the old page to the new page
+      memmove(dataSection, ptr, (info->psize - sizeof(struct pageheader))); 
+      
+      // Free up the original page
+      free(ptr);
+      
+      return (page + sizeof(struct pageheader));
+   }
 }
 
 // Initializes original functions for use in the rest of the library
@@ -121,14 +159,17 @@ void init_methods()
    
    // Create header page   
    queue = mmap(NULL, sizeof(struct queueheader), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-   queue->head = mmap(NULL, sizeof(struct pageheader), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-   queue->tail = queue->tail;
+   struct pageheader *headPage = mmap(NULL, sizeof(struct pageheader), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+   headPage->psize = sizeof(struct pageheader);
+   headPage->prev = NULL;
+   headPage->next = NULL;
+   queue->head = headPage;
+   queue->tail = queue->head;
 }
 
 // Called when the library is unloaded and prints out the number of leaks, size of the leaks, and the totals for both.
 void cleanup(void)
 {
-   /*
    struct pageheader *previous, *current;
    current = queue->tail;
    previous = current;
@@ -140,8 +181,7 @@ void cleanup(void)
       free(current);
       current = previous;
    }
-   */
-   //free(queue->head);
+   
    munmap(queue, sizeof(struct queueheader));
 }
 
