@@ -6,12 +6,10 @@ BINS= libmyalloc.so
 all: $(BINS)
 
 libmyalloc.so: allocator.c
-	$(CC) $(CFLAGS) -fPIC -shared -ldl -o libmyalloc.so allocator.c
+	$(CC) $(CFLAGS) -fPIC -shared -ldl -o libmyalloc.so allocator.c -lm
 
 %: %.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
 	rm $(BINS)
-	
-	

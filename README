@@ -1,47 +1,18 @@
 ------------------------------------------------------------------------------------
 Author:  Christian Trull 
 
-Package: project1.tgz
+Package: project3.tgz
 
 Known Problems:
-   leakcount.c:
-      This implementation currently only handles malloc() and free(), while there 
-      are more ways to allocate memory so it is still possible to leak memory that
-      this wont notice. For example, in the test cases where calloc() is used the
-      memory can be freed, but it's allocation is not monitored.
-
-   sctracer.c:
-      Currently the child can only run one executable per run, so if a user wanted to
-      keep track of all system calls between multiple executions with execvpe() they
-      will need to keep track of the output files and add them manually. 
+   allocator.c:
+      This implementation currently does not function like a big bag of pages, but
+      instead allocates a new page for each malloc/calloc/realloc call. Also, at a 
+      larger number of calls a segfault usually occurs. I believe this is caused 
+      because I am running out of memory and I am not checking before I use memory
+      if the mmap worked.
    
 Design:
-   leakcount.c:
-      For the memory_shim library there are two main parts: The code for shimming 
-      free() and malloc(), and the structure for a linked list to keep track of the 
-      nodes that monitor the malloc'd memory. The linked list is a simple singly 
-      linked list. leakcount.c just forks and has the child execute with execvpe() 
-      while the parent waits for the child to finish.
+   allocator.c:
       
-      I refered to the man pages for execvpe() for the leakcount.c call, and previous
-      assignments I have done for the linked list structure and logic. I used the 
-      example shim as a base for making the memory_shim library.
-   
-   sctracer.c:
-      sctracer.c has two main parts in the main(): the code the child executes and 
-      the tracing and printing that the parent does. The child allows tracing and 
-      then parses the input arguments to determine what to call and any arguments 
-      that need to go with it. The parent waits for the child to make system calls
-      and keeps track of them in a two dimensional array with a total count for 
-      each call. When the child exits the parent notices, prints to a specified
-      output, and then exits as well. The tracing code is mostly code from the 
-      tracing example, with modifications to loop through every call instead of 
-      just one call.
-      
-      I refered to the man pages for execvpe(), ptrace() and its options, and 
-      strtok() throughout this project, as well as using the ptrace example as a 
-      starting base for this assignment. strtok() was used to parse the 2nd input
-      argument to differentiate between the executable and it's parameters for when
-      execvpe() was called by the child.
    
 ------------------------------------------------------------------------------------

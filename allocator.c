@@ -37,8 +37,11 @@ struct queueheader{
 int fd;
 struct queueheader *queue;
 
+// Removes the page from the linked list of pages
 void takeFromQueue(struct pageheader *page)
 {
+   return;
+
    if(page == queue->tail)
    {
       queue->tail = page->prev;
@@ -50,15 +53,19 @@ void takeFromQueue(struct pageheader *page)
       page->next->prev = page->prev;   
 }
 
+// Adds the page to the linked list of pages
 void addToQueue(struct pageheader *addingPage)
 {
+   return;
+   
    queue->tail->next = addingPage;
    addingPage->prev = queue->tail;
    queue->tail = addingPage;
    addingPage->next = NULL;
 }
 
-// Shimmed malloc. Uses mmap to get pages which are used similar to how malloc normally works.
+// Gets a number of pages to hold the desired size of memory that the user requested and returns 
+// a pointer to where data can be stored on it.
 void *malloc (size_t size)
 {
    // No reason to get memory if none was requested
@@ -70,6 +77,7 @@ void *malloc (size_t size)
    size += sizeof(struct pageheader);
    int pageCount = 1;
    
+   // Determines number of pages needed
    if(size > PAGESIZE)
    {
       pageCount = ceil(size/PAGESIZE);
@@ -86,6 +94,7 @@ void *malloc (size_t size)
 // Releases page when the user calls to free the memory.
 void free (void *ptr)
 {
+   // Corner case check. Cant free NULL.
    if(ptr == NULL)
    {
       return;
@@ -98,7 +107,7 @@ void free (void *ptr)
    munmap(page, page->psize);
 }
 
-// 
+// Allocate a block of memory which has a block for data the size of nmemb * size
 void *calloc(size_t nmemb, size_t size)
 {  
    // No reason to get memory if none was requested
@@ -116,6 +125,7 @@ void *calloc(size_t nmemb, size_t size)
       pageCount = ceil(size/PAGESIZE);
    }
    
+   // Get the page, and set the relevant information before returning a pointer to the data section
    void *page = mmap(NULL, (pageCount * PAGESIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
    struct pageheader *header = page;
    header->psize = (pageCount * PAGESIZE);
@@ -124,14 +134,25 @@ void *calloc(size_t nmemb, size_t size)
    return (page + sizeof(struct pageheader));
 }
 
-// 
+// If the size parameter is larger than the block pointed to by ptr, a new page
+// is created, the memory is copied over, and the original block is freed.
 void *realloc(void *ptr, size_t size)
 {
+   // If realloc is called on a null pointer, malloc space and return it.
+   if(ptr == NULL)
+   {
+      return malloc(size);
+   }
+   
    struct pageheader *info = ptr - sizeof(struct pageheader);
+   
+   // Determine if the original block is smaller than the current memory
    if(info->psize >= (size + sizeof(struct pageheader)))
    {
       return ptr;
    }
+   
+   // The memory block is smaller than what is asked for, so allocating a new block of memory.
    else
    {  
       // Create new page
@@ -167,22 +188,9 @@ void init_methods()
    queue->tail = queue->head;
 }
 
-// Called when the library is unloaded and prints out the number of leaks, size of the leaks, and the totals for both.
 void cleanup(void)
 {
-   struct pageheader *previous, *current;
-   current = queue->tail;
-   previous = current;
    
-   while(queue->head != queue->tail)
-   {
-      previous = current->prev;
-      takeFromQueue(current);
-      free(current);
-      current = previous;
-   }
-   
-   munmap(queue, sizeof(struct queueheader));
 }
 
 
