@@ -9,10 +9,19 @@ Known Problems:
       instead allocates a new page for each malloc/calloc/realloc call. Also, at a 
       larger number of calls a segfault usually occurs. I believe this is caused 
       because I am running out of memory and I am not checking before I use memory
-      if the mmap worked.
+      if the mmap worked. I have also placed in a premature return statement for my
+      linked list methods because I have determined my implementation does not need
+      to keep track of the pages and there was a segmentation fault that I could 
+      not determine the cause of. 
    
 Design:
    allocator.c:
-      
+      This shared library is set up to shim the malloc, calloc, realloc, and free 
+      commands. For any time memory allocation is needed, a new page is requested 
+      with a size large enough to hold the size the user wants. For realloc, the 
+      sizes of the passed in memory and the passed in size are compared and, if 
+      needed, a new block is allocated. If a new block is allocated, the memory 
+      contents are transfered over to the new block and the previous block is freed
+      before returning the new pointer to the call.
    
 ------------------------------------------------------------------------------------

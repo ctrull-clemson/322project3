@@ -1,13 +1,18 @@
-/****************************************************************************************************************
+/************************************************************************************************************
 *
 * Author name: Christian Trull
 *
 * File Name:   allocator.c
 *
 * Summary:
-*  Type here
+*  This file has code to create a shared object library which has methods to replace malloc, calloc,
+*     realloc, and free. The memory allocating methods will allocate a number of pages for each call
+*     and return a pointer to the user. The realloc method will compare the size of the passed in 
+*     page with the new size and, if needed, allocate a larger block. If another block is allocated
+*     the memory will be copied and then the original block will be freed. The free method will unmap
+*     the page that was passed in. 
 *
-****************************************************************************************************************/
+************************************************************************************************************/
 #define _GNU_SOURCE
 #define PAGESIZE 4096
  
@@ -189,8 +194,7 @@ void init_methods()
 }
 
 void cleanup(void)
-{
-   
+{   
 }
 
 
